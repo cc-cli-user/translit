@@ -1,0 +1,57 @@
+# Образец курса (46.2–46.4, 47.1–47.4): релиз по тегу v* и строка версии в Profile README.
+# Готовые шаги курса — «сверка версии» и «Profile README» — не менять.
+# Секрет PROFILE_TOKEN — fine-grained токен только на <логин>/<логин>, Contents: Read and write.
+name: release
+on:
+  push:
+    tags: ["v*"]
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: npm
+      - name: сверка версии package.json с тегом (шаг курса)
+        run: |
+          v="v$(node -p 'require("./package.json").version')"
+          if [ "$v" != "$GITHUB_REF_NAME" ]; then
+            echo "::error::Тег $GITHUB_REF_NAME, а в package.json версия $v — поднимите версию своим PR и поставьте новый тег"
+            exit 1
+          fi
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+      - run: npm pack
+      - run: gh release create "$GITHUB_REF_NAME" translit-*.tgz --verify-tag --generate-notes
+        env:
+          GH_TOKEN: ${{ github.token }}
+  profile:
+    needs: release
+    runs-on: ubuntu-latest
+    permissions: {}
+    steps:
+      - name: строка версии в Profile README (шаг курса)
+        env:
+          GH_TOKEN: ${{ secrets.PROFILE_TOKEN }}
+          OWNER: ${{ github.repository_owner }}
+          REPO: ${{ github.event.repository.name }}
+        run: |
+          git clone --depth 1 "https://x-access-token:${GH_TOKEN}@github.com/${OWNER}/${OWNER}.git" profile
+          cd profile
+          line="${REPO} — ${GITHUB_REF_NAME}"
+          if grep -q "^${REPO} — v" README.md; then
+            sed -i "s/^${REPO} — v.*/${line}/" README.md
+          else
+            printf '\n%s\n' "$line" >> README.md
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add README.md
+          git diff --cached --quiet && { echo "строка версии уже такая"; exit 0; }
+          git commit -m "chore: ${REPO} ${GITHUB_REF_NAME}"
+          git push

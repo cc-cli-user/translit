@@ -1,0 +1,33 @@
+# Образец курса (45.1–45.2): ИИ-ревью каждого PR агентом Claude Code через шлюз платформы.
+# Секрет GATEWAY_KEY — ключ шлюза для CI. Агент пишет только комментарии: права — на чтение кода и запись в PR.
+name: review
+on:
+  pull_request:
+jobs:
+  review:
+    if: github.actor != 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: anthropics/claude-code-action@4fa93a88de49bbef68b10eb15aabedf28ca0e1ed # v1.0.271
+        with:
+          anthropic_api_key: ${{ secrets.GATEWAY_KEY }}
+          # токен workflow: без него action ищет приложение Anthropic на GitHub (OIDC, id-token)
+          github_token: ${{ github.token }}
+          # адрес шлюза и модель курса (требование платформы Ш13: шлюз пускает только модель курса)
+          settings: |
+            {"env": {"ANTHROPIC_BASE_URL": "https://llm.javarush.com", "ANTHROPIC_MODEL": "claude-course-fast"}}
+          # без списка инструментов агент читает PR, но не может оставить ни одного комментария
+          claude_args: |
+            --allowedTools "mcp__github_inline_comment__create_inline_comment,Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*)"
+          prompt: |
+            REPO: ${{ github.repository }}
+            PR NUMBER: ${{ github.event.pull_request.number }}
+
+            Проведи ревью этого Pull Request в библиотеке translit: файлы алфавитов в alphabets/, настройка, README.
+            Все комментарии — и к строкам, и итог — пиши только по-русски, без копии на английском.
+            Замечания к конкретным строкам — комментариями к строкам. Общий итог — одним комментарием командой gh pr comment.
+            Код в src/ — от курса, его не обсуждай.

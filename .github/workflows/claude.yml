@@ -1,0 +1,27 @@
+# Образец курса (45.4): правка по комментарию @claude в PR — агент Claude Code пишет коммит в ветку PR через шлюз платформы.
+# Секрет GATEWAY_KEY — ключ шлюза для CI. Звать агента может только владелец репозитория: в публичном PR комментарий
+# пишет кто угодно, а у агента здесь право записи (45.5).
+name: claude
+on:
+  issue_comment:
+    types: [created]
+  pull_request_review_comment:
+    types: [created]
+jobs:
+  claude:
+    if: contains(github.event.comment.body, '@claude') && github.event.comment.author_association == 'OWNER'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: anthropics/claude-code-action@4fa93a88de49bbef68b10eb15aabedf28ca0e1ed # v1.0.271
+        with:
+          anthropic_api_key: ${{ secrets.GATEWAY_KEY }}
+          # токен workflow: без него action ищет приложение Anthropic на GitHub (OIDC, id-token)
+          github_token: ${{ github.token }}
+          # адрес шлюза и модель курса (требование платформы Ш13: шлюз пускает только модель курса)
+          settings: |
+            {"env": {"ANTHROPIC_BASE_URL": "https://llm.javarush.com", "ANTHROPIC_MODEL": "claude-course-fast"}}
