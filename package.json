@@ -1,6 +1,6 @@
 {
   "name": "translit",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "description": "Кириллица латиницей: библиотека, команда и сайт с алфавитами на выбор",
   "type": "module",
   "main": "dist/index.js",

@@ -1,5 +1,9 @@
 # Изменения
 
+## 1.3.0
+
+- Новый алфавит — английская транскрипция BGN/PCGN (`alphabets/english.json`, #4).
+
 ## 1.2.0
 
 - Версия в Profile README сама: job `profile` workflow `release` (секрет `PROFILE_TOKEN`).
